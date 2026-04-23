@@ -14,7 +14,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ThemedText } from '@components/themed-text';
 import { StyleSheet } from 'react-native';
-import { useAuthStore } from '@/store/auth-store';
+import { useAuthStore, loadTokensFromSecureStore } from '@/store/auth-store';
 import { usePushRegistration } from '@/hooks/use-push-registration';
 import * as Notifications from 'expo-notifications';
 
@@ -73,6 +73,7 @@ function AuthGuard() {
 
 export default function RootLayout() {
     const colorScheme = useColorScheme();
+    const { setTokens } = useAuthStore();
     const [loaded] = useFonts({
         'Pretendard-Regular': require('../assets/fonts/Pretendard-Regular.otf'),
         'Pretendard-Medium': require('../assets/fonts/Pretendard-Medium.otf'),
@@ -80,6 +81,14 @@ export default function RootLayout() {
         'Pretendard-Bold': require('../assets/fonts/Pretendard-Bold.otf'),
         'Pretendard-ExtraBold': require('../assets/fonts/Pretendard-ExtraBold.otf'),
     });
+
+    useEffect(() => {
+        loadTokensFromSecureStore().then(({ accessToken, refreshToken }) => {
+            if (accessToken && refreshToken) {
+                setTokens(accessToken, refreshToken);
+            }
+        });
+    }, []);
 
     useEffect(() => {
         if (loaded) SplashScreen.hideAsync();

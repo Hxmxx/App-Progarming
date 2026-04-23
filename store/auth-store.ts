@@ -1,6 +1,37 @@
 import { create } from 'zustand';
+import * as SecureStore from 'expo-secure-store';
 import User from '@type/User';
 import { signup, login, SignupPayload, LoginPayload } from '@/api/auth';
+
+const KEYS = {
+    accessToken: 'accessToken',
+    refreshToken: 'refreshToken',
+} as const;
+
+async function saveTokens(accessToken: string, refreshToken: string) {
+    await Promise.all([
+        SecureStore.setItemAsync(KEYS.accessToken, accessToken),
+        SecureStore.setItemAsync(KEYS.refreshToken, refreshToken),
+    ]);
+}
+
+async function deleteTokens() {
+    await Promise.all([
+        SecureStore.deleteItemAsync(KEYS.accessToken),
+        SecureStore.deleteItemAsync(KEYS.refreshToken),
+    ]);
+}
+
+export async function loadTokensFromSecureStore(): Promise<{
+    accessToken: string | null;
+    refreshToken: string | null;
+}> {
+    const [accessToken, refreshToken] = await Promise.all([
+        SecureStore.getItemAsync(KEYS.accessToken),
+        SecureStore.getItemAsync(KEYS.refreshToken),
+    ]);
+    return { accessToken, refreshToken };
+}
 
 interface AuthState {
     user: User | null;
@@ -27,6 +58,7 @@ export const useAuthStore = create<AuthState>(set => ({
         set({ loading: true, error: null });
         try {
             const res = await signup(payload);
+            await saveTokens(res.accessToken, res.refreshToken);
             set({
                 user: res.user,
                 accessToken: res.accessToken,
@@ -49,6 +81,7 @@ export const useAuthStore = create<AuthState>(set => ({
         set({ loading: true, error: null });
         try {
             const res = await login(payload);
+            await saveTokens(res.accessToken, res.refreshToken);
             set({
                 user: res.user,
                 accessToken: res.accessToken,
@@ -68,6 +101,7 @@ export const useAuthStore = create<AuthState>(set => ({
     },
 
     logOut: () => {
+        deleteTokens();
         set({ user: null, accessToken: null, refreshToken: null, error: null });
     },
 
