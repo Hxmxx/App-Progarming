@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import User from '@type/User';
-import { signup, login, SignupPayload, LoginPayload } from '@/api/auth';
+import { signup, login, logout, SignupPayload, LoginPayload } from '@/api/auth';
 import { getMe } from '@/api/users';
 
 const KEYS = {
@@ -41,7 +41,7 @@ interface AuthState {
     clearError: () => void;
 }
 
-export const useAuthStore = create<AuthState>(set => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
     status: 'checking',
     user: null,
     accessToken: null,
@@ -121,6 +121,10 @@ export const useAuthStore = create<AuthState>(set => ({
     },
 
     logOut: async () => {
+        const { refreshToken } = get();
+        if (refreshToken) {
+            logout(refreshToken).catch(() => {});
+        }
         await deleteTokens();
         set({
             status: 'guest',
