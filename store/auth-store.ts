@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import User from '@type/User';
 import { signup, login, SignupPayload, LoginPayload } from '@/api/auth';
+import { getMe } from '@/api/users';
 
 const KEYS = {
     accessToken: 'accessToken',
@@ -53,10 +54,21 @@ export const useAuthStore = create<AuthState>(set => ({
             SecureStore.getItemAsync(KEYS.accessToken),
             SecureStore.getItemAsync(KEYS.refreshToken),
         ]);
-        if (accessToken && refreshToken) {
-            set({ accessToken, refreshToken, status: 'authenticated' });
-        } else {
+
+        if (!accessToken || !refreshToken) {
             set({ status: 'guest' });
+            return;
+        }
+
+        // apiClient 인터셉터가 토큰을 읽을 수 있도록 먼저 store에 주입
+        set({ accessToken, refreshToken });
+
+        try {
+            const user = await getMe();
+            set({ status: 'authenticated', user });
+        } catch {
+            await deleteTokens();
+            set({ status: 'guest', accessToken: null, refreshToken: null });
         }
     },
 
